@@ -47,6 +47,10 @@ export class LoginComponent implements OnInit, AfterViewInit {
   public readonly twoFactorCodeRequired = signal(false)
   public readonly inProgress = signal(false)
 
+  public get oidcAuth() {
+    return this.$settings.oidcAuth
+  }
+
   // Initialize form as property with all controls (including OTP for 2FA)
   // OTP validators are added dynamically when 2FA is required
   public form = new FormGroup({
@@ -153,6 +157,15 @@ export class LoginComponent implements OnInit, AfterViewInit {
       }
     }
     this.inProgress.set(false)
+  }
+
+  public loginWithOidc() {
+    if (!this.oidcAuth.enabled) {
+      return
+    }
+    this.inProgress.set(true)
+    const separator = this.oidcAuth.loginUrl.includes('?') ? '&' : '?'
+    window.location.assign(`${this.oidcAuth.loginUrl}${separator}returnTo=${encodeURIComponent(this.targetRoute)}`)
   }
 
   private async setBackground() {

@@ -37,6 +37,12 @@ export class SettingsService implements OnDestroy {
   public host!: string
   public proxyHost!: string
   public formAuth = true
+  public oidcAuth = {
+    enabled: false,
+    loginUrl: '/api/auth/oidc/login',
+    providerName: 'OIDC',
+  }
+
   public sessionTimeout = 28800
   public sessionTimeoutInactivityBased = false
   public uiVersion!: string
@@ -119,6 +125,7 @@ export class SettingsService implements OnDestroy {
   public async getAppSettings() {
     const data = await this.$api.get('/auth/settings') as AppSettingsInterface
     this.formAuth = data.formAuth
+    this.oidcAuth = data.oidcAuth ?? this.oidcAuth
     this.sessionTimeout = data.sessionTimeout
     this.sessionTimeoutInactivityBased = data.sessionTimeoutInactivityBased
     this.env = data.env

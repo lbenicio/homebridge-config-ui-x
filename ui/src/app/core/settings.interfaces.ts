@@ -91,6 +91,11 @@ export interface EnvInterface {
 export interface AppSettingsInterface {
   env: EnvInterface
   formAuth: boolean
+  oidcAuth?: {
+    enabled: boolean
+    loginUrl: string
+    providerName: string
+  }
   host?: string
   proxyHost?: string
   sessionTimeout: number

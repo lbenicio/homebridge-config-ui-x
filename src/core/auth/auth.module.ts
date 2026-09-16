@@ -15,6 +15,7 @@ import { WsAdminGuard } from './guards/ws-admin-guard.js'
 import { WsLogGuard } from './guards/ws-log.guard.js'
 import { WsGuard } from './guards/ws.guard.js'
 import { JwtStrategy } from './jwt.strategy.js'
+import { OidcService } from './oidc.service.js'
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { JwtStrategy } from './jwt.strategy.js'
   ],
   providers: [
     AuthService,
+    OidcService,
     JwtStrategy,
     WsGuard,
     WsAdminGuard,
@@ -48,6 +50,7 @@ import { JwtStrategy } from './jwt.strategy.js'
   ],
   exports: [
     AuthService,
+    OidcService,
     AdminGuard,
     JwtModule,
     PluginsSettingsUiTicketModule,

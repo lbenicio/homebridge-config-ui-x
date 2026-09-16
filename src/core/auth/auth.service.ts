@@ -187,6 +187,62 @@ export class AuthService {
     }
   }
 
+  async signInOidc(issuer: string, subject: string): Promise<any> {
+    const users = await this.getUsers()
+    const configuredUsername = this.configService.oidc.adminUsername?.toLowerCase()
+    const user = configuredUsername
+      ? users.find(candidate => candidate.username.toLowerCase() === configuredUsername)
+      : users.find(candidate => candidate.admin === true)
+
+    if (!user) {
+      throw new ForbiddenException('No Homebridge user is available for OIDC sign-in.')
+    }
+
+    await this.bindOidcIdentity(user.username, issuer, subject)
+    const currentUser = await this.findByUsername(user.username)
+    if (!currentUser) {
+      throw new ForbiddenException('The Homebridge user for OIDC sign-in no longer exists.')
+    }
+
+    const token = this.jwtService.sign({
+      username: currentUser.username,
+      name: currentUser.name,
+      admin: currentUser.admin,
+      instanceId: this.configService.instanceId,
+      sessionVersion: currentUser.sessionVersion ?? 0,
+      otpLegacySecret: currentUser.otpLegacySecret || false,
+      sessionStartedAt: Math.floor(Date.now() / 1000),
+    })
+
+    return {
+      access_token: token,
+      token_type: 'Bearer',
+      expires_in: this.configService.ui.sessionTimeout,
+    }
+  }
+
+  private async bindOidcIdentity(username: string, issuer: string, subject: string) {
+    await this.withAuthFile((authfile) => {
+      const user = authfile.find(candidate => candidate.username === username)
+      if (!user) {
+        throw new ForbiddenException('The Homebridge user for OIDC sign-in no longer exists.')
+      }
+
+      const existingIdentity = authfile.find(candidate => candidate.oidcIssuer === issuer && candidate.oidcSubject === subject)
+      if (existingIdentity && existingIdentity.username !== username) {
+        throw new ForbiddenException('This OIDC identity is already linked to another Homebridge user.')
+      }
+
+      if (user.oidcIssuer && user.oidcSubject
+        && (user.oidcIssuer !== issuer || user.oidcSubject !== subject)) {
+        throw new ForbiddenException('This Homebridge user is linked to a different OIDC identity.')
+      }
+
+      user.oidcIssuer = issuer
+      user.oidcSubject = subject
+    })
+  }
+
   /**
    * Verify as users username and password
    * This will throw an error if the credentials are incorrect.

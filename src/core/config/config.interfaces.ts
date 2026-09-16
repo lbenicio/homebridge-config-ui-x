@@ -181,3 +181,16 @@ export interface HomebridgeUiConfig {
     lightingMode?: 'light' | 'dark'
   }
 }
+
+export interface OidcConfig {
+  enabled: boolean
+  issuer: string
+  clientId: string
+  clientSecret: string
+  redirectUri?: string
+  scopes: string
+  providerName: string
+  allowedEmails: string[]
+  allowedGroups: string[]
+  adminUsername?: string
+}

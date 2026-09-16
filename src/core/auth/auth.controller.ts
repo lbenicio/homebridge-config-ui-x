@@ -1,12 +1,14 @@
 import type { FastifyReply, FastifyRequest } from 'fastify'
 
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
   Header,
   Inject,
   Post,
+  Query,
   Request,
   Res,
   UnauthorizedException,
@@ -24,6 +26,7 @@ import { Logger } from '../logger/logger.service.js'
 import { AuthDto, LogoutDto, RefreshTokenDto } from './auth.dto.js'
 import { AuthService } from './auth.service.js'
 import { CustomGuard } from './guards/custom.guard.js'
+import { OidcService } from './oidc.service.js'
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -35,6 +38,7 @@ export class AuthController {
     @Inject(PluginsSettingsUiTicketService) private readonly pluginUiTicketService: PluginsSettingsUiTicketService,
     @Inject(Logger) private readonly logger: Logger,
     @Inject(JwtService) private readonly jwtService: JwtService,
+    @Inject(OidcService) private readonly oidcService: OidcService,
   ) {}
 
   @ApiOperation({ summary: 'Exchange a username and password for an authentication token.' })
@@ -43,6 +47,40 @@ export class AuthController {
     const result = await this.authService.signIn(body.username, body.password, body.otp, req.ip)
     this.setRefreshCookie(res, result.access_token, req.protocol === 'https')
     return result
+  }
+
+  @ApiExcludeEndpoint()
+  @Get('/oidc/login')
+  async oidcLogin(
+    @Query('returnTo') returnTo: string = '/',
+    @Request() req: FastifyRequest,
+    @Res() res: FastifyReply,
+  ) {
+    const redirectUri = this.configService.oidc.redirectUri || this.oidcRedirectUri(req)
+    const authorizationUrl = await this.oidcService.createAuthorizationUrl(returnTo, redirectUri)
+    return res.redirect(authorizationUrl, 302)
+  }
+
+  @ApiExcludeEndpoint()
+  @Get('/oidc/callback')
+  async oidcCallback(
+    @Query('code') code: string,
+    @Query('state') state: string,
+    @Query('error') error: string,
+    @Request() req: FastifyRequest,
+    @Res() res: FastifyReply,
+  ) {
+    if (error) {
+      throw new UnauthorizedException('OIDC sign-in was cancelled or rejected.')
+    }
+    if (!code || !state) {
+      throw new BadRequestException('OIDC callback is missing code or state.')
+    }
+
+    const result = await this.oidcService.completeAuthorization(code, state)
+    const tokens = await this.authService.signInOidc(result.identity.issuer, result.identity.subject)
+    this.setRefreshCookie(res, tokens.access_token, this.isHttps(req))
+    return res.redirect(result.returnTo, 302)
   }
 
   @Get('/settings')
@@ -252,6 +290,19 @@ export class AuthController {
 
   private setRefreshCookie(res: FastifyReply, token: string, secure: boolean) {
     res.header('Set-Cookie', this.buildRefreshCookie(token, secure))
+  }
+
+  private oidcRedirectUri(req: FastifyRequest): string {
+    const host = req.headers.host
+    if (!host) {
+      throw new BadRequestException('Cannot determine the Homebridge callback host.')
+    }
+    return `${this.isHttps(req) ? 'https' : 'http'}://${host}${API_PREFIX}/auth/oidc/callback`
+  }
+
+  private isHttps(req: FastifyRequest): boolean {
+    const forwardedProto = req.headers['x-forwarded-proto']
+    return req.protocol === 'https' || forwardedProto === 'https' || forwardedProto?.[0] === 'https'
   }
 
   /**

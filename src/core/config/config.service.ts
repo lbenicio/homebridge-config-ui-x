@@ -1,6 +1,6 @@
 import type { ReadStream } from 'node:fs'
 
-import type { HomebridgeConfig, HomebridgeUiConfig } from './config.interfaces.js'
+import type { HomebridgeConfig, HomebridgeUiConfig, OidcConfig } from './config.interfaces.js'
 
 import { createHash, randomBytes } from 'node:crypto'
 import { createReadStream } from 'node:fs'
@@ -90,6 +90,19 @@ export class ConfigService {
   public homebridgeConfig: HomebridgeConfig
 
   public ui: HomebridgeUiConfig
+
+  public oidc: OidcConfig = {
+    enabled: process.env.HOMEBRIDGE_CONFIG_UI_OIDC_ENABLED === '1',
+    issuer: process.env.HOMEBRIDGE_CONFIG_UI_OIDC_ISSUER?.trim() || '',
+    clientId: process.env.HOMEBRIDGE_CONFIG_UI_OIDC_CLIENT_ID?.trim() || '',
+    clientSecret: process.env.HOMEBRIDGE_CONFIG_UI_OIDC_CLIENT_SECRET || '',
+    redirectUri: process.env.HOMEBRIDGE_CONFIG_UI_OIDC_REDIRECT_URI?.trim() || undefined,
+    scopes: process.env.HOMEBRIDGE_CONFIG_UI_OIDC_SCOPES?.trim() || 'openid profile email',
+    providerName: process.env.HOMEBRIDGE_CONFIG_UI_OIDC_PROVIDER_NAME?.trim() || 'OIDC',
+    allowedEmails: this.parseList(process.env.HOMEBRIDGE_CONFIG_UI_OIDC_ALLOWED_EMAILS),
+    allowedGroups: this.parseList(process.env.HOMEBRIDGE_CONFIG_UI_OIDC_ALLOWED_GROUPS),
+    adminUsername: process.env.HOMEBRIDGE_CONFIG_UI_OIDC_ADMIN_USERNAME?.trim() || undefined,
+  }
 
   private bridgeFreeze: this['homebridgeConfig']['bridge']
   private uiFreeze: this['ui']
@@ -186,6 +199,11 @@ export class ConfigService {
         temperatureUnits: this.ui.tempUnits || 'c',
       },
       formAuth: Boolean(this.ui.auth !== 'none'),
+      oidcAuth: {
+        enabled: this.oidc.enabled,
+        loginUrl: '/api/auth/oidc/login',
+        providerName: this.oidc.providerName,
+      },
       sessionTimeout: this.ui.sessionTimeout || 28800,
       sessionTimeoutInactivityBased: Boolean(this.ui.sessionTimeoutInactivityBased),
       lightingMode: this.ui.lightingMode || 'auto',
@@ -323,6 +341,12 @@ export class ConfigService {
     this.ui.theme = this.ui.theme || process.env.HOMEBRIDGE_CONFIG_UI_THEME || 'deep-purple'
     this.ui.auth = this.ui.auth || process.env.HOMEBRIDGE_CONFIG_UI_AUTH as 'form' | 'none' || 'form'
     this.ui.wallpaper = this.ui.wallpaper || process.env.HOMEBRIDGE_CONFIG_UI_LOGIN_WALLPAPER || undefined
+  }
+
+  private parseList(value?: string): string[] {
+    return value
+      ? value.split(',').map(item => item.trim().toLowerCase()).filter(Boolean)
+      : []
   }
 
   /**

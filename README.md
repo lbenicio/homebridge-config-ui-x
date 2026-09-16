@@ -46,6 +46,20 @@ The default username is `admin` and the default password is `admin`.
 
 The UI can be accessed via web browser by default on port `8581` (e.g. `http://localhost:8581`).
 
+### OIDC Authentication
+
+OIDC login can be enabled in Docker deployments with these environment variables:
+
+```text
+HOMEBRIDGE_CONFIG_UI_OIDC_ENABLED=1
+HOMEBRIDGE_CONFIG_UI_OIDC_ISSUER=https://identity.example
+HOMEBRIDGE_CONFIG_UI_OIDC_CLIENT_ID=...
+HOMEBRIDGE_CONFIG_UI_OIDC_CLIENT_SECRET=...
+HOMEBRIDGE_CONFIG_UI_OIDC_REDIRECT_URI=https://homebridge.example/api/auth/oidc/callback
+```
+
+The redirect URI must be registered with the provider. The first successful OIDC login binds that provider subject to the configured Homebridge user (the first administrator by default). Set `HOMEBRIDGE_CONFIG_UI_OIDC_ADMIN_USERNAME` to select a different user, or configure `HOMEBRIDGE_CONFIG_UI_OIDC_ALLOWED_EMAILS` and `HOMEBRIDGE_CONFIG_UI_OIDC_ALLOWED_GROUPS` to restrict access.
+
 ## Usage
 
 ### Status Screen

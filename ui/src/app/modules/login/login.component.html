@@ -95,10 +95,25 @@
         </div>
       }
       <div class="text-center">
-        <button tabindex="0" id="submit-button" class="btn btn-primary mb-2" type="submit" [disabled]="formInvalid()">
+        <button
+          tabindex="0"
+          id="submit-button"
+          class="btn btn-primary mb-2"
+          type="submit"
+          [disabled]="formInvalid() || inProgress()"
+        >
           {{ 'form.button_continue' | translate }}
         </button>
       </div>
     </form>
+    @if (oidcAuth.enabled) {
+      <div class="text-center mt-2">
+        <div class="small grey-text mb-2">or</div>
+        <button class="btn btn-outline-primary" type="button" [disabled]="inProgress()" (click)="loginWithOidc()">
+          <i class="fas fa-right-to-bracket me-2" aria-hidden="true"></i>
+          Sign in with {{ oidcAuth.providerName }}
+        </button>
+      </div>
+    }
   </div>
 </div>

@@ -70,6 +70,12 @@ export class UserDto {
 
   @Equals(undefined)
   otpLegacySecret?: boolean
+
+  @Equals(undefined)
+  oidcIssuer?: string
+
+  @Equals(undefined)
+  oidcSubject?: string
 }
 
 export class UserUpdatePasswordDto {
