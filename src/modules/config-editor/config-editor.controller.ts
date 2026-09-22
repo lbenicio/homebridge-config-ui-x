@@ -1,6 +1,7 @@
 import type { HomebridgeUiBridgeConfig } from '../../core/config/config.interfaces.js'
 
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -75,6 +76,14 @@ export class ConfigEditorController {
     summary: 'Return the config blocks for a specific plugin.',
     description: 'An array of config blocks will be returned. An empty array will be returned if the plugin is not configured.',
   })
+  @Get('/plugin')
+  getConfigForPluginQuery(@Query('pluginName') pluginName: string) {
+    if (!pluginName) {
+      throw new BadRequestException('pluginName is required.')
+    }
+    return this.configEditorService.getConfigForPlugin(pluginName)
+  }
+
   @Get('/plugin/:pluginName')
   getConfigForPlugin(@Param('pluginName') pluginName: string) {
     return this.configEditorService.getConfigForPlugin(pluginName)
@@ -85,6 +94,25 @@ export class ConfigEditorController {
     summary: 'Replace the config for a specific plugin.',
     description: 'An array of all config blocks for the plugin must be provided, missing blocks will be removed. Sending an empty array will remove all plugin config. Pass `?include=restart-info` to receive `{ config, affectedBridges }` with only this plugin\'s bridges in `affectedBridges` — the plugin settings modals use this to skip the follow-up `/status/homebridge/child-bridges` fetch.',
   })
+  @Post('/plugin')
+  @ApiBody({ description: 'Array of plugin config blocks', type: 'json', isArray: true })
+  @ApiQuery({
+    name: 'include',
+    type: 'string',
+    required: false,
+    description: 'Comma-separated extras. Supported: `restart-info`.',
+    example: 'restart-info',
+  })
+  updateConfigForPluginQuery(@Query('pluginName') pluginName: string, @Body() body, @Query('include') include?: string) {
+    if (!pluginName) {
+      throw new BadRequestException('pluginName is required.')
+    }
+    if (includesRestartInfo(include)) {
+      return this.configEditorService.updateConfigForPluginWithRestartInfo(pluginName, body)
+    }
+    return this.configEditorService.updateConfigForPlugin(pluginName, body)
+  }
+
   @Post('/plugin/:pluginName')
   @ApiBody({ description: 'Array of plugin config blocks', type: 'json', isArray: true })
   @ApiQuery({

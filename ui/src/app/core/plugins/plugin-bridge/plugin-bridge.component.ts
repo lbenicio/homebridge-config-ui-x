@@ -1326,7 +1326,10 @@ export class PluginBridgeComponent implements OnInit {
         this.normalizeHapConfig(block, hapEnabledBlocks[index], hapExternalsOnly, hapDisableIdentifyingMaterial)
       }
 
-      await this.$api.post(`/config-editor/plugin/${encodeURIComponent(plugin.name)}`, configBlocks)
+      const pluginConfigUrl = plugin.name.startsWith('@')
+        ? `/config-editor/plugin?pluginName=${encodeURIComponent(plugin.name)}`
+        : `/config-editor/plugin/${encodeURIComponent(plugin.name)}`
+      await this.$api.post(pluginConfigUrl, configBlocks)
 
       // Delete unused bridges, so no bridges are orphaned
       for (const bridge of this.deleteBridges()) {
