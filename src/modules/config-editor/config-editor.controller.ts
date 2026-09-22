@@ -85,6 +85,7 @@ export class ConfigEditorController {
   }
 
   @Get('/plugin/:pluginName')
+  @UseGuards(AdminGuard)
   getConfigForPlugin(@Param('pluginName') pluginName: string) {
     return this.configEditorService.getConfigForPlugin(pluginName)
   }
@@ -114,6 +115,7 @@ export class ConfigEditorController {
   }
 
   @Post('/plugin/:pluginName')
+  @UseGuards(AdminGuard)
   @ApiBody({ description: 'Array of plugin config blocks', type: 'json', isArray: true })
   @ApiQuery({
     name: 'include',

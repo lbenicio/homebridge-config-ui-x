@@ -76,6 +76,7 @@ yarn.lock
 
 # test directories
 test/.homebridge*
+test/mocks/.uix-secrets
 info
 
 # AI agents

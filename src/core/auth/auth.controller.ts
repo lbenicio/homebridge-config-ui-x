@@ -1,5 +1,8 @@
 import type { FastifyReply, FastifyRequest } from 'fastify'
 
+import { Buffer } from 'node:buffer'
+import { timingSafeEqual } from 'node:crypto'
+
 import {
   BadRequestException,
   Body,
@@ -56,9 +59,13 @@ export class AuthController {
     @Request() req: FastifyRequest,
     @Res() res: FastifyReply,
   ) {
-    const redirectUri = this.configService.oidc.redirectUri || this.oidcRedirectUri(req)
-    const authorizationUrl = await this.oidcService.createAuthorizationUrl(returnTo, redirectUri)
-    return res.redirect(authorizationUrl, 302)
+    const redirectUri = this.configService.oidc.redirectUri
+    if (!redirectUri) {
+      throw new BadRequestException('OIDC redirect URI must be configured.')
+    }
+    const authorization = await this.oidcService.createAuthorizationUrl(returnTo, redirectUri)
+    res.header('Set-Cookie', this.buildOidcStateCookie(authorization.state, this.isHttps(req)))
+    return res.redirect(authorization.authorizationUrl, 302)
   }
 
   @ApiExcludeEndpoint()
@@ -77,9 +84,15 @@ export class AuthController {
       throw new BadRequestException('OIDC callback is missing code or state.')
     }
 
+    const expectedState = this.readCookie(req.headers?.cookie, 'hb-oidc-state')
+    if (!expectedState || !this.equalSecrets(expectedState, state)) {
+      throw new UnauthorizedException('OIDC authorization state validation failed.')
+    }
+
     const result = await this.oidcService.completeAuthorization(code, state)
     const tokens = await this.authService.signInOidc(result.identity.issuer, result.identity.subject)
-    this.setRefreshCookie(res, tokens.access_token, this.isHttps(req))
+    const secure = this.isHttps(req)
+    res.header('Set-Cookie', [this.buildRefreshCookie(tokens.access_token, secure), this.buildClearedOidcStateCookie(secure)])
     return res.redirect(result.returnTo, 302)
   }
 
@@ -241,28 +254,15 @@ export class AuthController {
    * current-user checks, so a stale or revoked cookie restores nothing.
    */
   private readRefreshCookie(cookieHeader?: string): any | null {
-    if (!cookieHeader) {
+    const value = this.readCookie(cookieHeader, 'hb-refresh')
+    if (!value) {
       return null
     }
-    for (const part of cookieHeader.split(';')) {
-      const eq = part.indexOf('=')
-      if (eq === -1) {
-        continue
-      }
-      if (part.slice(0, eq).trim() !== 'hb-refresh') {
-        continue
-      }
-      const value = part.slice(eq + 1).trim()
-      if (!value) {
-        return null
-      }
-      try {
-        return this.jwtService.verify(value)
-      } catch {
-        return null
-      }
+    try {
+      return this.jwtService.verify(value)
+    } catch {
+      return null
     }
-    return null
   }
 
   /**
@@ -292,12 +292,30 @@ export class AuthController {
     res.header('Set-Cookie', this.buildRefreshCookie(token, secure))
   }
 
-  private oidcRedirectUri(req: FastifyRequest): string {
-    const host = req.headers.host
-    if (!host) {
-      throw new BadRequestException('Cannot determine the Homebridge callback host.')
+  private readCookie(cookieHeader: string | undefined, name: string): string | null {
+    for (const part of cookieHeader?.split(';') ?? []) {
+      const eq = part.indexOf('=')
+      if (eq !== -1 && part.slice(0, eq).trim() === name) {
+        return part.slice(eq + 1).trim() || null
+      }
     }
-    return `${this.isHttps(req) ? 'https' : 'http'}://${host}${API_PREFIX}/auth/oidc/callback`
+    return null
+  }
+
+  private equalSecrets(left: string, right: string): boolean {
+    const leftBuffer = Buffer.from(left)
+    const rightBuffer = Buffer.from(right)
+    return leftBuffer.length === rightBuffer.length && timingSafeEqual(leftBuffer, rightBuffer)
+  }
+
+  private buildOidcStateCookie(state: string, secure: boolean): string {
+    const secureFlag = secure ? '; Secure' : ''
+    return `hb-oidc-state=${state}; HttpOnly; SameSite=Lax; Path=${API_PREFIX}/auth/oidc; Max-Age=600${secureFlag}`
+  }
+
+  private buildClearedOidcStateCookie(secure: boolean): string {
+    const secureFlag = secure ? '; Secure' : ''
+    return `hb-oidc-state=; HttpOnly; SameSite=Lax; Path=${API_PREFIX}/auth/oidc; Max-Age=0${secureFlag}`
   }
 
   private isHttps(req: FastifyRequest): boolean {

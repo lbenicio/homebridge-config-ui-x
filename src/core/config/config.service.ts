@@ -100,7 +100,9 @@ export class ConfigService {
     scopes: process.env.HOMEBRIDGE_CONFIG_UI_OIDC_SCOPES?.trim() || 'openid profile email',
     providerName: process.env.HOMEBRIDGE_CONFIG_UI_OIDC_PROVIDER_NAME?.trim() || 'OIDC',
     allowedEmails: this.parseList(process.env.HOMEBRIDGE_CONFIG_UI_OIDC_ALLOWED_EMAILS),
-    allowedGroups: this.parseList(process.env.HOMEBRIDGE_CONFIG_UI_OIDC_ALLOWED_GROUPS),
+    allowedGroups: process.env.HOMEBRIDGE_CONFIG_UI_OIDC_ALLOWED_GROUPS === undefined
+      ? ['admin']
+      : this.parseList(process.env.HOMEBRIDGE_CONFIG_UI_OIDC_ALLOWED_GROUPS),
     adminUsername: process.env.HOMEBRIDGE_CONFIG_UI_OIDC_ADMIN_USERNAME?.trim() || undefined,
   }
 

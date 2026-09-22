@@ -56,9 +56,10 @@ HOMEBRIDGE_CONFIG_UI_OIDC_ISSUER=https://identity.example
 HOMEBRIDGE_CONFIG_UI_OIDC_CLIENT_ID=...
 HOMEBRIDGE_CONFIG_UI_OIDC_CLIENT_SECRET=...
 HOMEBRIDGE_CONFIG_UI_OIDC_REDIRECT_URI=https://homebridge.example/api/auth/oidc/callback
+HOMEBRIDGE_CONFIG_UI_OIDC_ALLOWED_GROUPS=admin
 ```
 
-The redirect URI must be registered with the provider. The first successful OIDC login binds that provider subject to the configured Homebridge user (the first administrator by default). Set `HOMEBRIDGE_CONFIG_UI_OIDC_ADMIN_USERNAME` to select a different user, or configure `HOMEBRIDGE_CONFIG_UI_OIDC_ALLOWED_EMAILS` and `HOMEBRIDGE_CONFIG_UI_OIDC_ALLOWED_GROUPS` to restrict access.
+The HTTPS redirect URI must be registered exactly with the provider. OIDC access requires an allowlist; when `HOMEBRIDGE_CONFIG_UI_OIDC_ALLOWED_GROUPS` is unset, the default required group is `admin`. The first successful OIDC login binds that provider subject to the configured Homebridge user (the first administrator by default). Set `HOMEBRIDGE_CONFIG_UI_OIDC_ADMIN_USERNAME` to select a different user, or configure `HOMEBRIDGE_CONFIG_UI_OIDC_ALLOWED_EMAILS` and `HOMEBRIDGE_CONFIG_UI_OIDC_ALLOWED_GROUPS` to restrict access further.
 
 ## Usage
 

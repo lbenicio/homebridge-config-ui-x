@@ -47,6 +47,11 @@ interface PendingAuthorization {
   expiresAt: number
 }
 
+export interface OidcAuthorization {
+  authorizationUrl: string
+  state: string
+}
+
 interface OidcFetchInit {
   method?: string
   headers?: Record<string, string>
@@ -76,7 +81,7 @@ export class OidcService {
     return `${API_PREFIX}/auth/oidc/login`
   }
 
-  async createAuthorizationUrl(returnTo: string, redirectUri: string): Promise<string> {
+  async createAuthorizationUrl(returnTo: string, redirectUri: string): Promise<OidcAuthorization> {
     this.requireEnabled()
     const discovery = await this.getDiscovery()
     const state = this.randomToken()
@@ -102,7 +107,7 @@ export class OidcService {
     authorizationUrl.searchParams.set('nonce', nonce)
     authorizationUrl.searchParams.set('code_challenge', codeChallenge)
     authorizationUrl.searchParams.set('code_challenge_method', 'S256')
-    return authorizationUrl.toString()
+    return { authorizationUrl: authorizationUrl.toString(), state }
   }
 
   async completeAuthorization(code: string, state: string): Promise<OidcLoginResult> {
@@ -132,6 +137,17 @@ export class OidcService {
     }
     if (issuer.protocol !== 'https:') {
       throw new BadGatewayException('OIDC issuer must use HTTPS.')
+    }
+    if (!config.redirectUri) {
+      throw new BadGatewayException('OIDC redirect URI must be configured.')
+    }
+    try {
+      const redirectUri = new URL(config.redirectUri)
+      if (redirectUri.protocol !== 'https:' || redirectUri.pathname !== `${API_PREFIX}/auth/oidc/callback` || redirectUri.search || redirectUri.hash) {
+        throw new Error('invalid redirect URI')
+      }
+    } catch {
+      throw new BadGatewayException('OIDC redirect URI must be an HTTPS callback URL.')
     }
   }
 
@@ -245,6 +261,9 @@ export class OidcService {
 
   private checkAllowList(identity: OidcIdentity) {
     const { allowedEmails, allowedGroups } = this.configService.oidc
+    if (!allowedEmails.length && !allowedGroups.length) {
+      throw new ForbiddenException('OIDC access requires an email or group allowlist.')
+    }
     if (allowedEmails.length && (!identity.email || !allowedEmails.includes(identity.email))) {
       throw new ForbiddenException('This OIDC account is not allowed to access Homebridge.')
     }
