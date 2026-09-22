@@ -46,6 +46,7 @@ export class LoginComponent implements OnInit, AfterViewInit {
   public readonly invalid2faCode = signal(false)
   public readonly twoFactorCodeRequired = signal(false)
   public readonly inProgress = signal(false)
+  public readonly showPasswordForm = signal(false)
 
   public get oidcAuth() {
     return this.$settings.oidcAuth
@@ -166,6 +167,14 @@ export class LoginComponent implements OnInit, AfterViewInit {
     this.inProgress.set(true)
     const separator = this.oidcAuth.loginUrl.includes('?') ? '&' : '?'
     window.location.assign(`${this.oidcAuth.loginUrl}${separator}returnTo=${encodeURIComponent(this.targetRoute)}`)
+  }
+
+  public showPasswordLogin() {
+    this.showPasswordForm.set(true)
+  }
+
+  public showOidcLogin() {
+    this.showPasswordForm.set(false)
   }
 
   private async setBackground() {

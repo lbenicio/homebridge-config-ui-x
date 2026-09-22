@@ -186,6 +186,35 @@ describe('loginComponent', () => {
     })
   })
 
+  describe('OIDC login', () => {
+    it('makes the configured identity provider the primary login option', async () => {
+      const { fixture, page } = await open({
+        settings: makeSettings({
+          oidcAuth: { enabled: true, loginUrl: '/api/auth/oidc/login', providerName: 'Pocket ID' },
+        }),
+      })
+
+      expect(page.showPasswordForm()).toBe(false)
+      expect(fixture.nativeElement.querySelector('#oidc-login-button')).not.toBeNull()
+      expect(fixture.nativeElement.querySelector('#form-username')).toBeNull()
+    })
+
+    it('keeps password login available as a secondary option', async () => {
+      const { fixture, page } = await open({
+        settings: makeSettings({
+          oidcAuth: { enabled: true, loginUrl: '/api/auth/oidc/login', providerName: 'Pocket ID' },
+        }),
+      })
+
+      page.showPasswordLogin()
+      fixture.detectChanges()
+
+      expect(page.showPasswordForm()).toBe(true)
+      expect(fixture.nativeElement.querySelector('#form-username')).not.toBeNull()
+      expect(fixture.nativeElement.querySelector('#oidc-login-button')).toBeNull()
+    })
+  })
+
   describe('two factor authentication', () => {
     it('asks for a code when the server says one is needed', async () => {
       const { page } = await open({ auth: makeAuth({ login: vi.fn(async () => Promise.reject(httpError(412))) as any }) })

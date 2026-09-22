@@ -71,6 +71,11 @@ export function makeSettings(overrides: MakeSettingsOverrides = {}): FakeSetting
     host: 'localhost',
     proxyHost: 'localhost:8581',
     formAuth: true,
+    oidcAuth: {
+      enabled: false,
+      loginUrl: '/api/auth/oidc/login',
+      providerName: 'OIDC',
+    },
     sessionTimeout: 28800,
     sessionTimeoutInactivityBased: false,
     uiVersion: '5.0.0',
