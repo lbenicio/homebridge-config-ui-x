@@ -1,4 +1,4 @@
-import { Controller, ForbiddenException, Get, Inject, Param, Post, Query, Request, UseGuards } from '@nestjs/common'
+import { BadRequestException, Controller, ForbiddenException, Get, Inject, Param, Post, Query, Request, UseGuards } from '@nestjs/common'
 import { AuthGuard } from '@nestjs/passport'
 import { ApiBearerAuth, ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger'
 
@@ -71,6 +71,17 @@ export class PluginsController {
 
   @UseGuards(AdminGuard)
   @ApiOperation({ summary: 'Get the `config.schema.json` for a plugin.' })
+  @ApiQuery({ name: 'pluginName', type: 'string', required: true })
+  @Get('config-schema')
+  getPluginConfigSchemaByQuery(@Query('pluginName') pluginName?: string) {
+    if (!pluginName) {
+      throw new BadRequestException('pluginName is required')
+    }
+    return this.pluginsService.getPluginConfigSchema(pluginName)
+  }
+
+  @UseGuards(AdminGuard)
+  @ApiOperation({ summary: 'Get the `config.schema.json` for a plugin.' })
   @ApiParam({ name: 'pluginName', type: 'string' })
   @Get('config-schema/:pluginName')
   getPluginConfigSchema(@Param('pluginName') pluginName) {
@@ -96,6 +107,20 @@ export class PluginsController {
   @Get('release/:pluginName')
   getPluginRelease(@Param('pluginName') pluginName, @Query('version') version?: string) {
     return this.pluginsService.getPluginRelease(pluginName, version)
+  }
+
+  @UseGuards(AdminGuard)
+  @ApiOperation({
+    summary: 'Attempt to resolve the type (platform or accessory) and alias for a plugin.',
+    description: 'NOTE: `pluginAlias` and `pluginType` will be `null` if the type or alias could not be resolved.',
+  })
+  @ApiQuery({ name: 'pluginName', type: 'string', required: true })
+  @Get('alias')
+  getPluginAliasByQuery(@Query('pluginName') pluginName?: string) {
+    if (!pluginName) {
+      throw new BadRequestException('pluginName is required')
+    }
+    return this.pluginsService.getPluginAlias(pluginName)
   }
 
   @UseGuards(AdminGuard)
@@ -134,6 +159,25 @@ export class PluginsController {
         childBridges: { type: 'array', items: { type: 'object' } },
       },
     },
+  })
+  @UseGuards(AdminGuard)
+  @ApiOperation({
+    summary: 'Bundled context for plugin editor modals — alias, config schema, saved config blocks, and the plugin\'s child bridges.',
+    description: 'Query-string form for plugin names containing `/`, which avoids ingress routers rejecting encoded slashes in path parameters.',
+  })
+  @ApiQuery({ name: 'pluginName', type: 'string', required: true })
+  @Get('editor-context')
+  getEditorContextByQuery(@Query('pluginName') pluginName?: string) {
+    if (!pluginName) {
+      throw new BadRequestException('pluginName is required')
+    }
+    return this.pluginsService.getEditorContext(pluginName)
+  }
+
+  @UseGuards(AdminGuard)
+  @ApiOperation({
+    summary: 'Bundled context for plugin editor modals — alias, config schema, saved config blocks, and the plugin\'s child bridges.',
+    description: 'Replaces the four-call fan-out (`/plugins/alias/:name`, `/plugins/config-schema/:name`, `/config-editor/plugin/:name`, `/status/homebridge/child-bridges`) the UI used to issue on every modal open. `configSchema` is `null` for plugins that ship without a `config.schema.json`.',
   })
   @Get(':pluginName/editor-context')
   getEditorContext(@Param('pluginName') pluginName: string) {

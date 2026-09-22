@@ -470,7 +470,7 @@ export class ManagePluginsService {
    * plugins.
    */
   public async loadEditorContext(pluginName: string): Promise<PluginEditorContext> {
-    return this.$api.get(`/plugins/${encodeURIComponent(pluginName)}/editor-context`)
+    return this.$api.get(`/plugins/editor-context?pluginName=${encodeURIComponent(pluginName)}`)
   }
 
   /**

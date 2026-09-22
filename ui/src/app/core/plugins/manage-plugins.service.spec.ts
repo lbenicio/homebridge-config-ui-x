@@ -520,14 +520,14 @@ describe('managePluginsService', () => {
       expect(toastr.error).toHaveBeenCalledWith('plugins.toast_failed_to_load_plugin_schema', 'toast.title_error')
     })
 
-    it('asks the server for that plugin context, url-encoding the name', async () => {
+    it('asks the server for that plugin context using a query parameter', async () => {
       // Scoped plugin names contain a slash
       api.respond('get', /editor-context/, editorContext())
 
       void service.settings(makePlugin({ name: '@scope/homebridge-example' }))
       await settle()
 
-      expect(api.lastCall('get')?.url).toBe('/plugins/%40scope%2Fhomebridge-example/editor-context')
+      expect(api.lastCall('get')?.url).toBe('/plugins/editor-context?pluginName=%40scope%2Fhomebridge-example')
     })
   })
 
